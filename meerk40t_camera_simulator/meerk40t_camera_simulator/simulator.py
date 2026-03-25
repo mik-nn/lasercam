@@ -16,6 +16,15 @@ class MockCapture:
         self.ball_vel = [5, 5]
         self.last_frame_time = time.time()
         self.fps = 10.0 # Simulator FPS
+        self._prepare_bg()
+
+    def _prepare_bg(self):
+        """
+        AICODE-NOTE: Pre-allocating background and frame buffers to avoid
+        per-frame memory allocation overhead in read().
+        """
+        self.bg = np.full((self.height, self.width, 3), 50, dtype=np.uint8)
+        self._frame = np.empty((self.height, self.width, 3), dtype=np.uint8)
 
     def isOpened(self):
         return self.is_opened
@@ -31,8 +40,9 @@ class MockCapture:
             time.sleep(time_to_wait)
         self.last_frame_time = time.time()
 
-        # Create a synthetic image (dark gray background)
-        img = np.full((self.height, self.width, 3), 50, dtype=np.uint8)
+        # AICODE-NOTE: Reuse pre-allocated frame buffer instead of calling np.full.
+        self._frame[:] = self.bg
+        img = self._frame
 
         # Update ball position
         self.ball_pos[0] += self.ball_vel[0]
@@ -71,10 +81,14 @@ class MockCapture:
 
     def set(self, propId, value):
         if propId == cv2.CAP_PROP_FRAME_WIDTH:
-            self.width = int(value)
+            if self.width != int(value):
+                self.width = int(value)
+                self._prepare_bg()
             return True
         elif propId == cv2.CAP_PROP_FRAME_HEIGHT:
-            self.height = int(value)
+            if self.height != int(value):
+                self.height = int(value)
+                self._prepare_bg()
             return True
         elif propId == cv2.CAP_PROP_FPS:
             if value <= 0:
