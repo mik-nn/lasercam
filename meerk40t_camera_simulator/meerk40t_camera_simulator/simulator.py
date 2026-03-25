@@ -1,12 +1,15 @@
+import time
+
 import cv2
 import numpy as np
-import time
+
 
 class MockCapture:
     """
     A mock class replacing cv2.VideoCapture.
     Generates synthetic frames with a bouncing ball or text.
     """
+
     def __init__(self, width=640, height=480):
         self.is_opened = True
         self.frame_count = 0
@@ -15,7 +18,29 @@ class MockCapture:
         self.ball_pos = [self.width // 2, self.height // 2]
         self.ball_vel = [5, 5]
         self.last_frame_time = time.time()
-        self.fps = 10.0 # Simulator FPS
+        self.fps = 10.0  # Simulator FPS
+        self.bg = None
+        self._prepare_bg()
+
+    def _prepare_bg(self):
+        """
+        Pre-allocate the static background image and draw static elements.
+        """
+        self.bg = np.full((self.height, self.width, 3), 50, dtype=np.uint8)
+        # Draw a bounding rectangle
+        cv2.rectangle(
+            self.bg, (10, 10), (self.width - 10, self.height - 10), (255, 255, 255), 2
+        )
+        # Draw some static text
+        cv2.putText(
+            self.bg,
+            "Meerk40t Camera Simulator",
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (255, 255, 0),
+            2,
+        )
 
     def isOpened(self):
         return self.is_opened
@@ -31,8 +56,8 @@ class MockCapture:
             time.sleep(time_to_wait)
         self.last_frame_time = time.time()
 
-        # Create a synthetic image (dark gray background)
-        img = np.full((self.height, self.width, 3), 50, dtype=np.uint8)
+        # Use pre-allocated background image
+        img = self.bg.copy()
 
         # Update ball position
         self.ball_pos[0] += self.ball_vel[0]
@@ -44,15 +69,19 @@ class MockCapture:
         if self.ball_pos[1] <= 0 or self.ball_pos[1] >= self.height:
             self.ball_vel[1] = -self.ball_vel[1]
 
-        # Draw a bounding rectangle
-        cv2.rectangle(img, (10, 10), (self.width - 10, self.height - 10), (255, 255, 255), 2)
-
         # Draw the bouncing ball
         cv2.circle(img, tuple(self.ball_pos), 20, (0, 0, 255), -1)
 
-        # Draw some text
-        cv2.putText(img, f"Meerk40t Camera Simulator", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
-        cv2.putText(img, f"Frame: {self.frame_count}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        # Draw dynamic text
+        cv2.putText(
+            img,
+            f"Frame: {self.frame_count}",
+            (20, 80),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 255, 0),
+            2,
+        )
 
         self.frame_count += 1
         return True, img
@@ -72,9 +101,11 @@ class MockCapture:
     def set(self, propId, value):
         if propId == cv2.CAP_PROP_FRAME_WIDTH:
             self.width = int(value)
+            self._prepare_bg()
             return True
         elif propId == cv2.CAP_PROP_FRAME_HEIGHT:
             self.height = int(value)
+            self._prepare_bg()
             return True
         elif propId == cv2.CAP_PROP_FPS:
             if value <= 0:
@@ -93,7 +124,13 @@ def plugin(kernel, lifecycle=None):
     Registers a new console command "camera simulator" which injects the MockCapture into the current camera service.
     """
     if lifecycle == "register":
-        @kernel.console_command("simulator", help="Start the camera simulator", input_type="camera", output_type="camera")
+
+        @kernel.console_command(
+            "simulator",
+            help="Start the camera simulator",
+            input_type="camera",
+            output_type="camera",
+        )
         def start_simulator(channel, _, data=None, **kwargs):
             if data is None:
                 channel("No camera selected.")
