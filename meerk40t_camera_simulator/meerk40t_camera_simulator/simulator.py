@@ -51,7 +51,7 @@ class MockCapture:
         cv2.circle(img, tuple(self.ball_pos), 20, (0, 0, 255), -1)
 
         # Draw some text
-        cv2.putText(img, f"Meerk40t Camera Simulator", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
+        cv2.putText(img, "Meerk40t Camera Simulator", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
         cv2.putText(img, f"Frame: {self.frame_count}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
         self.frame_count += 1
@@ -94,7 +94,8 @@ def plugin(kernel, lifecycle=None):
     """
     if lifecycle == "register":
         @kernel.console_command("simulator", help="Start the camera simulator", input_type="camera", output_type="camera")
-        def start_simulator(channel, _, data=None, **kwargs):
+        def start_simulator(channel, _, data=None, **_kwargs):
+            # AICODE-NOTE: _kwargs is unused but kept for MeerK40t console command signature compatibility.
             if data is None:
                 channel("No camera selected.")
                 return None
