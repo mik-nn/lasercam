@@ -61,25 +61,35 @@ class MockCapture:
         self.is_opened = False
 
     def get(self, propId):
-        if propId == cv2.CAP_PROP_FRAME_WIDTH:
-            return float(self.width)
-        elif propId == cv2.CAP_PROP_FRAME_HEIGHT:
-            return float(self.height)
-        elif propId == cv2.CAP_PROP_FPS:
-            return self.fps
+        # AICODE-NOTE: Using dictionary dispatch for OpenCV property retrieval to improve maintainability.
+        mapping = {
+            cv2.CAP_PROP_FRAME_WIDTH: lambda: float(self.width),
+            cv2.CAP_PROP_FRAME_HEIGHT: lambda: float(self.height),
+            cv2.CAP_PROP_FPS: lambda: self.fps,
+        }
+        if propId in mapping:
+            return mapping[propId]()
         return 0.0
 
     def set(self, propId, value):
-        if propId == cv2.CAP_PROP_FRAME_WIDTH:
-            self.width = int(value)
-            return True
-        elif propId == cv2.CAP_PROP_FRAME_HEIGHT:
-            self.height = int(value)
-            return True
-        elif propId == cv2.CAP_PROP_FPS:
-            if value <= 0:
-                value = 1.0
-            self.fps = value
+        # AICODE-NOTE: Using dictionary dispatch for property updates, ensuring FPS validation.
+        def set_width(v):
+            self.width = int(v)
+
+        def set_height(v):
+            self.height = int(v)
+
+        def set_fps(v):
+            self.fps = v if v > 0 else 1.0
+
+        mapping = {
+            cv2.CAP_PROP_FRAME_WIDTH: set_width,
+            cv2.CAP_PROP_FRAME_HEIGHT: set_height,
+            cv2.CAP_PROP_FPS: set_fps,
+        }
+
+        if propId in mapping:
+            mapping[propId](value)
             return True
         return False
 
