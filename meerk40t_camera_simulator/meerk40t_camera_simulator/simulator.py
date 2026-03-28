@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 import time
 
+MAX_SIMULATOR_WIDTH = 3840
+MAX_SIMULATOR_HEIGHT = 2160
+
 class MockCapture:
     """
     A mock class replacing cv2.VideoCapture.
@@ -71,10 +74,12 @@ class MockCapture:
 
     def set(self, propId, value):
         if propId == cv2.CAP_PROP_FRAME_WIDTH:
-            self.width = int(value)
+            # AICODE-NOTE: Enforce reasonable bounds to prevent DoS via excessive memory allocation
+            self.width = max(1, min(int(value), MAX_SIMULATOR_WIDTH))
             return True
         elif propId == cv2.CAP_PROP_FRAME_HEIGHT:
-            self.height = int(value)
+            # AICODE-NOTE: Enforce reasonable bounds to prevent DoS via excessive memory allocation
+            self.height = max(1, min(int(value), MAX_SIMULATOR_HEIGHT))
             return True
         elif propId == cv2.CAP_PROP_FPS:
             if value <= 0:
